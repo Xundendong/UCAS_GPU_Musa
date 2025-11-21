@@ -1,5 +1,5 @@
 import torch
-imoort torch_musa
+import torch_musa
 from fastapi import FastAPI
 from pydantic import BaseModel
 import os
