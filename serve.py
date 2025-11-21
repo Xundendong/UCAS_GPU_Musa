@@ -24,7 +24,7 @@ generator = pipeline(
     'text-generation',
     model=model,
     tokenizer=tokenizer,
-    # device=0  # 若有GPU可启用
+    device=0  # 若有GPU可启用
 )
 set_seed(42)
 

@@ -1,10 +1,4 @@
 fastapi>=0.104.0
 uvicorn>=0.24.0
 pydantic>=2.4.0
-transformers>=4.35.0
-
-# uncomment these if use non-GPU images
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.4.0
-torchvision==0.19.0
-torchaudio==2.4.0 
+transformers==4.37.2
