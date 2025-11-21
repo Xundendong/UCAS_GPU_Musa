@@ -11,7 +11,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # 在生产或更复杂的场景中，可以替换为其他模型
 
 
-# 本地模型路径（和步骤1中保存的路径一致）
+# 本地模型路径
 LOCAL_MODEL_PATH = "./local-distilgpt2"
 
 # --- 模型加载（从本地加载，无需网络）---
