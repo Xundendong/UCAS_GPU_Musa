@@ -1,11 +1,20 @@
+# download_model.py（仅用于下载，下载完成后可删除）
 import os
 
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# 指定 Hugging Face 镜像源
+# 模型名称
+model_name = "distilgpt2"
+# 本地保存路径（可自定义，例如 "./local-distilgpt2"）
+local_model_path = "./local-distilgpt2"
 
-# 加载模型和 tokenizer
-model = AutoModelForCausalLM.from_pretrained("distilgpt2")
-tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
+# 下载并保存模型和tokenizer
+print(f"开始下载模型 {model_name} 到 {local_model_path}...")
+model = AutoModelForCausalLM.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+model.save_pretrained(local_model_path)
+tokenizer.save_pretrained(local_model_path)
+print("下载完成！")

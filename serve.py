@@ -1,14 +1,31 @@
 import torch
 from fastapi import FastAPI
 from pydantic import BaseModel
+import os
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
 from transformers import pipeline, set_seed
 
 # --- 模型加载 ---
 # 为了保证最小化和快速启动，我们使用 distilgpt2
 # 这是GPT-2的一个更小、更快、更轻的版本
 # 在生产或更复杂的场景中，可以替换为其他模型
-generator = pipeline('text-generation', model='distilgpt2')
-# generator = pipeline('text-generation', model='distilgpt2', device=0) # for GPU
+
+
+# 本地模型路径（和步骤1中保存的路径一致）
+LOCAL_MODEL_PATH = "./local-distilgpt2"
+
+# --- 模型加载（从本地加载，无需网络）---
+print(f"从本地加载模型：{LOCAL_MODEL_PATH}")
+# 手动加载本地模型和tokenizer
+tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_PATH)
+model = AutoModelForCausalLM.from_pretrained(LOCAL_MODEL_PATH)
+# 初始化pipeline（使用本地模型）
+generator = pipeline(
+    'text-generation',
+    model=model,
+    tokenizer=tokenizer,
+    # device=0  # 若有GPU可启用
+)
 set_seed(42)
 
 # --- API 定义 ---
