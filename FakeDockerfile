@@ -1,0 +1,13 @@
+{
+    "python_version": "3.10",
+    "workdir": "/app",
+    "copy_rules": [
+        {"src": ".", "dest": "."}
+    ],
+    "run_commands": [
+        "pip install --no-cache-dir -r requirements.txt"
+    ],
+    "cmd": [
+        "uvicorn", "serve:app", "--host", "0.0.0.0", "--port", "8000"
+    ]
+}
