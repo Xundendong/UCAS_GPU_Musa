@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import os
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 from transformers import pipeline, set_seed
-
+from transformers import AutoModelForCausalLM, AutoTokenizer
 # --- 模型加载 ---
 # 为了保证最小化和快速启动，我们使用 distilgpt2
 # 这是GPT-2的一个更小、更快、更轻的版本
