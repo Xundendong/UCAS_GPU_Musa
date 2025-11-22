@@ -6,7 +6,7 @@ os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # 模型名称
-model_name = "Qwen/Qwen-7B-Chat"
+model_name = "mistralai/Mistral-7B-v0.1"
 # 本地保存路径（可自定义，例如 "./local-distilgpt2"）
 local_model_path = "./local-model"
 
