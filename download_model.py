@@ -6,9 +6,9 @@ os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # 模型名称
-model_name = "distilgpt2"
+model_name = "meta-llama/Meta-Llama-3-8B"
 # 本地保存路径（可自定义，例如 "./local-distilgpt2"）
-local_model_path = "./local-distilgpt2"
+local_model_path = "./local-model"
 
 # 下载并保存模型和tokenizer
 print(f"开始下载模型 {model_name} 到 {local_model_path}...")

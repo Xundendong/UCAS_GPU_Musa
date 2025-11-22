@@ -13,7 +13,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 # 本地模型路径
-LOCAL_MODEL_PATH = "./local-distilgpt2"
+LOCAL_MODEL_PATH = "./local-model"
 
 # --- 模型加载（从本地加载，无需网络）---
 print(f"从本地加载模型：{LOCAL_MODEL_PATH}")
