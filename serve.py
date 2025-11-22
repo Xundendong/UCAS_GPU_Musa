@@ -25,7 +25,7 @@ generator = pipeline(
     'text-generation',
     model=model,
     tokenizer=tokenizer,
-    device=0  # 若有GPU可启用
+    device='musa'
 )
 set_seed(42)
 
