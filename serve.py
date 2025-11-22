@@ -25,7 +25,17 @@ generator = pipeline(
     'text-generation',
     model=model,
     tokenizer=tokenizer,
-    device='musa'
+    device='musa',
+    # 禁用重复生成（解决重复问题）
+    repetition_penalty=1.3,  # >1 惩罚重复token，数值越大重复越少
+    # 控制随机性（0=确定性生成，适合问答）
+    temperature=0.1,
+    # 限制输出长度（避免过长或过短）
+    max_new_tokens=80,  # 新增80个token（不包含prompt长度，比max_length更合理）
+    min_new_tokens=30,  # 至少生成30个token（保证回答完整）
+    # 采样策略（提高回答质量）
+    top_p=0.9,
+    do_sample=True
 )
 set_seed(42)
 
