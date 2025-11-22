@@ -25,17 +25,7 @@ generator = pipeline(
     'text-generation',
     model=model,
     tokenizer=tokenizer,
-    device='musa',
-    # 禁用重复生成（解决重复问题）
-    repetition_penalty=1.3,  # >1 惩罚重复token，数值越大重复越少
-    # 控制随机性（0=确定性生成，适合问答）
-    temperature=0.1,
-    # 限制输出长度（避免过长或过短）
-    max_new_tokens=80,  # 新增80个token（不包含prompt长度，比max_length更合理）
-    min_new_tokens=30,  # 至少生成30个token（保证回答完整）
-    # 采样策略（提高回答质量）
-    top_p=0.9,
-    do_sample=True
+    device='musa'
 )
 set_seed(42)
 
@@ -64,16 +54,16 @@ def predict(request: PromptRequest):
     # 学生可以在这里修改推理逻辑
     # 例如，调整max_length, num_return_sequences等参数
     model_output = generator(
-        request.prompt, 
-        max_length=50, 
-        num_return_sequences=1
+        f"Q: {request.prompt}\nA:",
+        max_length=200,
+        num_return_sequences=1,
+        do_sample=False,  # 关闭随机，输出更稳定
+        eos_token_id=tokenizer.eos_token_id,
     )
     
-    # 从模型输出中提取生成的文本
-    generated_text = model_output[0]['generated_text']
-    
-    # 返回符合格式的响应
-    return PredictResponse(response=generated_text)
+    generated_text = model_output[0]["generated_text"]
+    answer = generated_text.split("A:")[1].strip()
+    return PredictResponse(response=answer)
 
 @app.get("/")
 def health_check():
