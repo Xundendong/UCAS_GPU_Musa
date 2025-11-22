@@ -49,21 +49,37 @@ class PredictResponse(BaseModel):
 def predict(request: PromptRequest):
     """
     接收一个prompt，使用加载的模型进行推理，并返回结果。
-    这是评测程序将会调用的主要端点。
     """
-    # 学生可以在这里修改推理逻辑
-    # 例如，调整max_length, num_return_sequences等参数
+
+    # 单轮 Prompt
+    prompt = f"Q: {request.prompt}\nA:"
+
+    # 使用 max_new_tokens + return_full_text=False 来防止重复 prompt
     model_output = generator(
-        f"Q: {request.prompt}\nA:",
-        max_length=200,
+        prompt,
+        max_new_tokens=80,            # 生成长度只限制新增内容
         num_return_sequences=1,
-        do_sample=False,  # 关闭随机，输出更稳定
+        do_sample=False,              # 关闭采样，稳定输出
+        return_full_text=False,       # 只返回新增内容，非常关键！
+        pad_token_id=tokenizer.eos_token_id,
         eos_token_id=tokenizer.eos_token_id,
     )
-    
-    generated_text = model_output[0]["generated_text"]
-    answer = generated_text.split("A:")[1].strip()
-    return PredictResponse(response=answer)
+
+    generated = model_output[0]["generated_text"].strip()
+
+    # 截断可能继续生成的 "Q:" 或下一轮问话
+    for sep in ["\nQ:", "\nQ ", "Q:", "\nQuestion:", "\n\nQ:"]:
+        pos = generated.find(sep)
+        if pos != -1:
+            generated = generated[:pos].strip()
+            break
+
+    # 防止答案开头重复问句
+    if generated.startswith(request.prompt):
+        generated = generated[len(request.prompt):].strip(" \n:.-")
+
+    return PredictResponse(response=generated)
+
 
 @app.get("/")
 def health_check():
