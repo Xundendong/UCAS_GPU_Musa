@@ -12,8 +12,8 @@ local_model_path = "./local-model"
 
 # 下载并保存模型和tokenizer
 print(f"开始下载模型 {model_name} 到 {local_model_path}...")
-model = AutoModelForCausalLM.from_pretrained(model_name)
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 
 model.save_pretrained(local_model_path)
 tokenizer.save_pretrained(local_model_path)
