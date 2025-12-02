@@ -5,22 +5,18 @@
 
 ## 项目结构
 
-- `FakeDockerfile`: 用于构建容器镜像的配置文件,但是这个是假的，因为摩尔线程的评测机是容器实例，没有办法再创建容器了，这里的FROM并不是拉取容器镜像。**请不要修改此文件的 EXPOSE 端口和 CMD 命令**。
+- `FakeDockerfile`: 用于构建的配置文件,但是这个是假的，因为摩尔线程的评测机是容器实例，没有办法再创建容器了，这里的FROM并不是拉取容器镜像。**请不要修改此文件的 EXPOSE 端口和 CMD 命令**。
 - `serve.py`: 推理服务的核心代码。您需要在此文件中修改和优化您的模型加载与推理逻辑。这个程序不能访问Internet。
 - `requirements.txt`: Python依赖列表。您可以添加您需要的库。
 - `.gitignore`: Git版本控制忽略的文件列表。
-- `download_model.py`: 下载权重的脚本，可以自行修改，请确保中国大陆的网络能够下载到。
+- `download_model.py`: 下载权重的脚本，可以自行修改，请确保中国大陆的网络能够下载到。可以使用阿里云对象存储等云平台，或者参考沐曦代码模板中的方式。
 - `README.md`: 本说明文档。
 
 ## 如何修改
 
 您需要关注的核心文件是 `serve.py`。
 
-目前，它使用 `transformers` 库加载了一个非常小的模型 `distilgpt2`。您可以：
-
-1.  **替换模型**: 将 `model='distilgpt2'` 替换为您希望使用的其他模型。
-2.  **优化推理逻辑**: 在 `predict` 函数中，您可以修改 `generator()` 的参数，如 `max_length`, `top_k`, `top_p` 等，以获得更好的生成效果。
-3.  **使用其他推理框架**: 您可以完全替换 `serve.py` 的内容，只要保证容器运行后，能提供一个接收 `POST` 请求的 `/predict` 端点即可。
+目前，它使用 `transformers` 库加载了一个非常小的模型 `facebook/opt-1.3b`。您可以您可以完全替换 `serve.py` 的内容，只要保证容器运行后，能提供一个接收 `POST` 请求的 `/predict` 等端点即可。
 
 **重要**: 评测系统会向 `/predict` 端点发送 `POST` 请求，其JSON body格式为：
 
@@ -39,7 +35,14 @@
 
 **请务必保持此API契约不变！**
 
-项目的基础环境是这样的，不要替换任何和torch相关的包，否则无法调用GPU
+## 环境说明
+
+### 软件包版本
+
+Driver version: 2.7.0
+MUSA version: 3.1.0
+
+项目的基础环境是这样的，不要替换任何和torch相关的包，否则无法调用GPU，这个模板的工作方式是直接复制一份具有下列软件包的conda环境然后再用pip安装其它的包。
 
 Package                        Version
 ------------------------------ ------------------
@@ -190,3 +193,27 @@ websocket-client               1.8.0
 Werkzeug                       3.1.3
 wheel                          0.37.1
 widgetsnbextension             4.0.14
+
+
+### judge平台的配置说明
+
+judge机器的配置如下：
+
+``` text
+os: ubuntu22.04
+cpu: 15核
+内存: 100GB
+磁盘: 30GB
+GPU: MTT S4000(显存：48GB)
+网络带宽：1-2Gbps，这个网络是区域的总带宽，不要太依赖它
+```
+
+judge系统的配置如下：
+
+``` text
+docker build stage: 600s
+docker run - health check stage: 60s
+docker run - predict stage: 60s
+```
+
+
