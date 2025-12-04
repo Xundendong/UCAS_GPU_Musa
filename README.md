@@ -211,9 +211,9 @@ GPU: MTT S4000(显存：48GB)
 judge系统的配置如下：
 
 ``` text
-docker build stage: 600s
+docker build stage: 1500s
 docker run - health check stage: 60s
-docker run - predict stage: 60s
+docker run - predict stage: 360s
 ```
 
 
