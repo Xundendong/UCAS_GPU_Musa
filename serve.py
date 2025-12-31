@@ -1,5 +1,5 @@
 import torch
-# 尝试导入摩尔线程专用库 (有些环境需要显式导入，有些不需要，为了保险加上)
+# 尝试导入摩尔线程专用库 (必须导入)
 try:
     import torch_musa
 except ImportError:
@@ -10,37 +10,42 @@ from pydantic import BaseModel
 import os
 import uvicorn
 
-# 设置离线模式，防止 transformers 尝试联网
+# 设置离线模式
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
+# 引入 vLLM
+from vllm import LLM, SamplingParams
+# 仍需 Tokenizer 来处理对话模板
+from transformers import AutoTokenizer
 
 # --- 1. 修改模型路径 ---
-# 必须指向 download_model.py 下载的那个文件夹
 LOCAL_MODEL_PATH = "./qwen-2.5-merged-final"
 
-print(f"正在加载模型: {LOCAL_MODEL_PATH} ...")
+print(f"正在加载模型 (vLLM): {LOCAL_MODEL_PATH} ...")
 
-# --- 2. 加载 Tokenizer ---
+# --- 2. 加载 Tokenizer (仅用于处理 Chat 模板) ---
+# vLLM 内部其实也有 tokenizer，但为了精确控制 Prompt 格式，
+# 我们在外部处理好模板再喂给 vLLM 是最稳妥的。
 tokenizer = AutoTokenizer.from_pretrained(
     LOCAL_MODEL_PATH, 
     trust_remote_code=True
 )
 
-# --- 3. 加载模型 (针对摩尔线程优化) ---
-print("正在加载权重到 MUSA 设备...")
-model = AutoModelForCausalLM.from_pretrained(
-    LOCAL_MODEL_PATH,
+# --- 3. 加载 vLLM 模型 (针对摩尔线程优化) ---
+# gpu_memory_utilization=0.9 表示占用 90% 显存
+# 如果你运行报错 OOM (Out Of Memory)，请尝试改成 0.8 或 0.7
+print("正在初始化 vLLM 引擎...")
+llm = LLM(
+    model=LOCAL_MODEL_PATH,
     trust_remote_code=True,
-    torch_dtype=torch.float16,  # 关键：使用半精度，速度快且省显存
-    device_map="musa"           # 关键：指定设备为摩尔线程 GPU (musa)
+    tensor_parallel_size=1,      # 单卡模式
+    gpu_memory_utilization=0.9,  # 显存占用比例
+    dtype="float16",              # 强制半精度
+    device="musa"
 )
 
-# 将模型设置为评估模式
-model.eval()
-
 # --- API 定义 ---
-app = FastAPI(title="MUSA Inference Server")
+app = FastAPI(title="MUSA vLLM Inference Server")
 
 class PromptRequest(BaseModel):
     prompt: str
@@ -51,50 +56,46 @@ class PredictResponse(BaseModel):
 @app.post("/predict", response_model=PredictResponse)
 def predict(request: PromptRequest):
     """
-    摩尔线程专用推理接口
+    基于 vLLM 的摩尔线程推理接口
     """
-    # --- 4. 构建 Qwen 专用的 Chat 模板 ---
-    # Qwen2.5 需要这种格式才能发挥出微调的效果
     prompt = request.prompt
+    
+    # --- 4. 构建 Prompt (应用 Chat 模板) ---
     messages = [
         {"role": "system", "content": "你是一个有用的助手。"},
         {"role": "user", "content": prompt}
     ]
     
-    # 使用 tokenizer 自动应用模板
-    text = tokenizer.apply_chat_template(
+    # 将对话列表转换为纯文本 prompt
+    text_input = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
         add_generation_prompt=True
     )
     
-    # 编码输入
-    model_inputs = tokenizer([text], return_tensors="pt").to("musa")
+    # --- 5. 设置采样参数 ---
+    # vLLM 的参数是在这里设置的
+    sampling_params = SamplingParams(
+        temperature=0.7,       # 控制随机性
+        top_p=0.8,
+        max_tokens=512,        # 最大生成长度
+        stop_token_ids=[tokenizer.eos_token_id] # 遇到结束符停止
+    )
 
-    # --- 5. 执行推理 ---
-    with torch.no_grad(): # 这一步很重要，不计算梯度能省很多显存
-        generated_ids = model.generate(
-            model_inputs.input_ids,
-            max_new_tokens=512,       # 最大生成长度
-            do_sample=False,          # 贪婪搜索，结果稳定
-            temperature=0.01,         # 只有 do_sample=True 时才生效，这里设低点防止乱码
-            pad_token_id=tokenizer.eos_token_id
-        )
+    # --- 6. 执行推理 (vLLM) ---
+    # vLLM 接受列表输入，这里我们放入一个请求
+    outputs = llm.generate([text_input], sampling_params)
 
-    # --- 6. 提取输出 ---
-    # 去掉输入部分的 token，只保留新生成的
-    generated_ids = [
-        output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
-    ]
+    # --- 7. 提取输出 ---
+    # vLLM 的 output 对象包含了原始 prompt 和生成的 text
+    generated_text = outputs[0].outputs[0].text
     
-    response_text = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-    
-    return PredictResponse(response=response_text.strip())
+    return PredictResponse(response=generated_text.strip())
 
 @app.get("/")
 def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "backend": "vllm_musa"}
 
-# 如果你需要本地测试，可以使用: python serve.py
 if __name__ == "__main__":
+    # 启动服务
     uvicorn.run(app, host="0.0.0.0", port=8000)
